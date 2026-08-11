@@ -223,15 +223,37 @@
     camera.position.set(dist*Math.sin(phi)*Math.cos(theta),dist*Math.cos(phi),dist*Math.sin(phi)*Math.sin(theta));
     camera.lookAt(0,0,0);
   }
-  var dragging=false,px=0,py=0;
-  renderer.domElement.addEventListener('pointerdown',function(e){dragging=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId);});
+  var dragging=false,px=0,py=0,pointers={},pinchDistance=0;
+  function pointerCount(){return Object.keys(pointers).length;}
+  function getPinchDistance(){
+    var ids=Object.keys(pointers),a=pointers[ids[0]],b=pointers[ids[1]];
+    return Math.hypot(a.x-b.x,a.y-b.y);
+  }
+  renderer.domElement.addEventListener('pointerdown',function(e){
+    pointers[e.pointerId]={x:e.clientX,y:e.clientY}; dragging=pointerCount()===1; px=e.clientX; py=e.clientY;
+    if(pointerCount()===2){dragging=false;pinchDistance=getPinchDistance();}
+    renderer.domElement.setPointerCapture(e.pointerId);
+  });
   renderer.domElement.addEventListener('pointermove',function(e){
+    if(!pointers[e.pointerId])return;
+    pointers[e.pointerId]={x:e.clientX,y:e.clientY};
+    if(pointerCount()===2){
+      var now=getPinchDistance();
+      if(pinchDistance){dist=Math.max(110,Math.min(900,dist-(now-pinchDistance)*0.9));updateCam();}
+      pinchDistance=now; return;
+    }
     if(!dragging)return;
     theta-=(e.clientX-px)*0.008;
     phi=Math.max(0.18,Math.min(1.52,phi-(e.clientY-py)*0.006));
     px=e.clientX;py=e.clientY;updateCam();
   });
-  renderer.domElement.addEventListener('pointerup',function(){dragging=false;});
+  function releasePointer(e){
+    delete pointers[e.pointerId]; dragging=pointerCount()===1;
+    if(dragging){var id=Object.keys(pointers)[0];px=pointers[id].x;py=pointers[id].y;}
+    pinchDistance=pointerCount()===2?getPinchDistance():0;
+  }
+  renderer.domElement.addEventListener('pointerup',releasePointer);
+  renderer.domElement.addEventListener('pointercancel',releasePointer);
   renderer.domElement.addEventListener('wheel',function(e){
     e.preventDefault(); dist=Math.max(110,Math.min(900,dist+e.deltaY*0.45)); updateCam();
   },{passive:false});
