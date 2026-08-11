@@ -7,11 +7,11 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(34, 1, .1, 100);
-camera.position.set(0, 3.3, 7.7);
+camera.position.set(0, 2.65, 7.25);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true; controls.enablePan = false;
 controls.minDistance = 4.7; controls.maxDistance = 10;
-controls.target.set(0, .05, 0);
+controls.target.set(0, -.25, 0);
 
 scene.add(new THREE.HemisphereLight(0xffecd8, 0x321612, 2.5));
 const key = new THREE.DirectionalLight(0xffc197, 3.1); key.position.set(-4, 6, 5); scene.add(key);
@@ -20,9 +20,8 @@ const floor = new THREE.Mesh(new THREE.CircleGeometry(4.8, 72), new THREE.MeshSt
 floor.rotation.x = -Math.PI / 2; floor.position.y = -1.08; scene.add(floor);
 
 const root = new THREE.Group(); scene.add(root);
-const red = new THREE.MeshStandardMaterial({ color: 0xba302f, roughness: .82, side: THREE.DoubleSide });
-const redEdge = new THREE.MeshStandardMaterial({ color: 0x7e1e25, roughness: .9, side: THREE.DoubleSide });
-const kraft = new THREE.MeshStandardMaterial({ color: 0xcba16d, roughness: .94 });
+const red = new THREE.MeshStandardMaterial({ color: 0xc92d31, roughness: .74, emissive: 0x3a0507, emissiveIntensity: .38, side: THREE.DoubleSide });
+const kraft = new THREE.MeshStandardMaterial({ color: 0xd2ab76, roughness: .88, emissive: 0x241407, emissiveIntensity: .22 });
 
 // The radial profile is the sleeping surface: low outer edge, shallow solid concavity at centre.
 const radial = [.56, .76, 1.10, 1.48, 1.82, 2.06];
@@ -51,6 +50,9 @@ const plateGeometry = new THREE.ExtrudeGeometry(plateShape(), { depth: .075, bev
 const plateA = new THREE.Mesh(plateGeometry, kraft);
 const plateB = new THREE.Mesh(plateGeometry, kraft);
 root.add(plateA, plateB);
+// At the final magnetic closure the full end boards sit behind the paper; only the narrow kraft closure band remains visible.
+const closureBand = new THREE.Mesh(new THREE.BoxGeometry(.13, .80, .10), kraft);
+closureBand.position.set(0, -.20, -2.08); closureBand.visible = false; root.add(closureBand);
 
 function pointAt(radius, height, angle) { return new THREE.Vector3(radius * Math.cos(angle), height, radius * Math.sin(angle)); }
 function updateFan(progress) {
@@ -100,14 +102,15 @@ function arrange(value) {
   setMaterialsOpacity(compact, compactOpacity);
   fan.visible = p > .012;
   honeyLines.visible = p > .012;
-  plateA.visible = plateB.visible = p > .012;
+  plateA.visible = plateB.visible = p > .012 && p < .985;
+  closureBand.visible = p >= .985;
   document.querySelector('#amount').value = `${Math.round(value)}%`;
   const stage = value < 5 ? '收合狀態' : value < 32 ? '初步展開' : value < 72 ? '半開圓弧' : '完整圓形';
   document.querySelector('#stage').textContent = stage;
   document.querySelector('#dimension').textContent = value < 5 ? '25 × 17 × 9 cm' : value < 98 ? `展開 ${Math.round(value * 3.6)}°` : 'Ø 50 × H 17 cm';
 }
 const slider = document.querySelector('#expand'); slider.addEventListener('input', () => arrange(Number(slider.value)));
-document.querySelector('#reset').addEventListener('click', () => { camera.position.set(0, 3.3, 7.7); controls.target.set(0, .05, 0); controls.update(); });
+document.querySelector('#reset').addEventListener('click', () => { camera.position.set(0, 2.65, 7.25); controls.target.set(0, -.25, 0); controls.update(); });
 function resize() { const r = canvas.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(canvas); resize(); arrange(100);
 renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
