@@ -5,100 +5,109 @@ const canvas = document.querySelector('#scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(32, 1, .1, 100);
-camera.position.set(0, 2.4, 7.8);
+const camera = new THREE.PerspectiveCamera(34, 1, .1, 100);
+camera.position.set(0, 3.3, 7.7);
 const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
-controls.enablePan = false;
-controls.minDistance = 4.7;
-controls.maxDistance = 10;
-controls.target.set(0, .15, 0);
+controls.enableDamping = true; controls.enablePan = false;
+controls.minDistance = 4.7; controls.maxDistance = 10;
+controls.target.set(0, .05, 0);
 
-scene.add(new THREE.HemisphereLight(0xffddbf, 0x2c1514, 2.8));
-const key = new THREE.DirectionalLight(0xffb17d, 3.4); key.position.set(-4, 5, 5); scene.add(key);
-const floor = new THREE.Mesh(new THREE.CircleGeometry(4.8, 64), new THREE.MeshStandardMaterial({ color:0x52251e, roughness:1, transparent:true, opacity:.42 }));
-floor.rotation.x = -Math.PI / 2; floor.position.y = -1.25; scene.add(floor);
+scene.add(new THREE.HemisphereLight(0xffecd8, 0x321612, 2.5));
+const key = new THREE.DirectionalLight(0xffc197, 3.1); key.position.set(-4, 6, 5); scene.add(key);
+const fill = new THREE.DirectionalLight(0xc74735, 1.2); fill.position.set(5, 1, -4); scene.add(fill);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(4.8, 72), new THREE.MeshStandardMaterial({ color: 0x52251e, roughness: 1, transparent: true, opacity: .46 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = -1.08; scene.add(floor);
 
-const bed = new THREE.Group(); scene.add(bed);
-const red = new THREE.MeshStandardMaterial({ color:0xb52d2d, roughness:.79, metalness:0 });
-const kraft = new THREE.MeshStandardMaterial({ color:0xcba26f, roughness:.93, metalness:0 });
-const collapsed = new THREE.Group();
-const expanded = new THREE.Group();
-bed.add(collapsed, expanded);
+const root = new THREE.Group(); scene.add(root);
+const red = new THREE.MeshStandardMaterial({ color: 0xba302f, roughness: .82, side: THREE.DoubleSide });
+const redEdge = new THREE.MeshStandardMaterial({ color: 0x7e1e25, roughness: .9, side: THREE.DoubleSide });
+const kraft = new THREE.MeshStandardMaterial({ color: 0xcba16d, roughness: .94 });
 
-// 收合狀態：依參考圖的「柿餅」剖面做成兩片牛皮紙側板與紅色蜂巢紙內芯。
-const sideProfile = new THREE.Shape();
-sideProfile.moveTo(-1.78, -.78);
-sideProfile.lineTo(-1.78, -.13);
-sideProfile.bezierCurveTo(-1.25, -.04, -.72, .13, -.28, .40);
-sideProfile.bezierCurveTo(.05, .60, .26, 1.12, .74, 1.18);
-sideProfile.bezierCurveTo(1.22, 1.22, 1.66, .94, 1.76, .55);
-sideProfile.lineTo(1.76, -.78);
-sideProfile.lineTo(-1.78, -.78);
-const panelGeometry = new THREE.ExtrudeGeometry(sideProfile, { depth:.05, bevelEnabled:true, bevelThickness:.025, bevelSize:.025, bevelSegments:2 });
-for (const z of [-.59, .54]) {
-  const panel = new THREE.Mesh(panelGeometry, kraft);
-  panel.position.z = z;
-  collapsed.add(panel);
-}
-const coreGeometry = new THREE.ExtrudeGeometry(sideProfile, { depth:1.06, bevelEnabled:false });
-const core = new THREE.Mesh(coreGeometry, red);
-core.position.set(0, 0, -.53);
-collapsed.add(core);
-// 紅色內芯的細分條紋，模擬收合的蜂巢紙片。
-for (let i=0; i<20; i++) {
-  const stripe = new THREE.Mesh(new THREE.BoxGeometry(.025, .02, 1.08), new THREE.MeshStandardMaterial({ color:0x8e2228, roughness:.92 }));
-  stripe.position.set(-1.57 + i * .165, -.785, 0);
-  collapsed.add(stripe);
+// The radial profile is the sleeping surface: low outer edge, shallow solid concavity at centre.
+const radial = [.56, .76, 1.10, 1.48, 1.82, 2.06];
+const heights = [-.62, -.42, -.24, -.13, .02, .16];
+const slices = 86;
+const fanGeometry = new THREE.BufferGeometry();
+const fan = new THREE.Mesh(fanGeometry, red);
+const honeyLines = new THREE.Group();
+root.add(fan, honeyLines);
+for (let i = 0; i < slices; i += 2) {
+  const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x821d24, transparent: true, opacity: .72 }));
+  honeyLines.add(line);
 }
 
-// 展開狀態：中心為實心凹槽，不是穿透的甜甜圈。
-const bowlProfile = [
-  new THREE.Vector2(0, -.56), new THREE.Vector2(.55, -.55),
-  new THREE.Vector2(1.25, -.42), new THREE.Vector2(1.76, -.08),
-  new THREE.Vector2(2.06, .24), new THREE.Vector2(2.14, .42)
-];
-const bowl = new THREE.Mesh(new THREE.LatheGeometry(bowlProfile, 96), red);
-expanded.add(bowl);
-// 同心紙紋讓展開後的碗狀貓床保留蜂巢紙的層次感。
-for (let i=1; i<17; i++) {
-  const radius = .14 + i * .119;
-  const y = -.565 + Math.pow(radius / 2.14, 2.15) * .94;
-  const ridge = new THREE.Mesh(new THREE.TorusGeometry(radius, .016, 6, 72), new THREE.MeshStandardMaterial({ color:0x8d2428, roughness:.86 }));
-  ridge.rotation.x = Math.PI / 2;
-  ridge.position.y = y;
-  expanded.add(ridge);
+function plateShape() {
+  const s = new THREE.Shape();
+  // Same silhouette for both end boards: low front, concave rise, tall rounded rear, fastening tab.
+  s.moveTo(-2.08, -.68); s.lineTo(-2.08, -.10);
+  s.bezierCurveTo(-1.56, -.03, -.95, .12, -.37, .42);
+  s.bezierCurveTo(.05, .64, .29, 1.04, .68, 1.10);
+  s.bezierCurveTo(1.18, 1.16, 1.72, .90, 1.82, .47);
+  s.lineTo(1.82, -.30); s.lineTo(2.03, -.30); s.lineTo(2.03, -.11); s.lineTo(1.82, -.11);
+  s.lineTo(1.82, -.68); s.closePath(); return s;
 }
-const rim = new THREE.Mesh(new THREE.TorusGeometry(2.14, .045, 8, 96), kraft);
-rim.rotation.x = Math.PI / 2;
-rim.position.y = .42;
-expanded.add(rim);
+const plateGeometry = new THREE.ExtrudeGeometry(plateShape(), { depth: .075, bevelEnabled: true, bevelSize: .018, bevelThickness: .018, bevelSegments: 2 });
+const plateA = new THREE.Mesh(plateGeometry, kraft);
+const plateB = new THREE.Mesh(plateGeometry, kraft);
+root.add(plateA, plateB);
 
-function setOpacity(group, opacity) {
-  group.traverse((object) => {
-    if (!object.isMesh) return;
-    object.material.transparent = true;
-    object.material.opacity = opacity;
-    object.visible = opacity > .015;
+function pointAt(radius, height, angle) { return new THREE.Vector3(radius * Math.cos(angle), height, radius * Math.sin(angle)); }
+function updateFan(progress) {
+  const angle = THREE.MathUtils.lerp(.025, Math.PI * 2, progress);
+  const verts = [], lines = [];
+  for (let j = 0; j < slices - 1; j++) {
+    const a = -Math.PI / 2 + angle * j / (slices - 1);
+    const b = -Math.PI / 2 + angle * (j + 1) / (slices - 1);
+    for (let k = 0; k < radial.length - 1; k++) {
+      const p1 = pointAt(radial[k], heights[k], a), p2 = pointAt(radial[k + 1], heights[k + 1], a);
+      const p3 = pointAt(radial[k + 1], heights[k + 1], b), p4 = pointAt(radial[k], heights[k], b);
+      verts.push(...p1.toArray(), ...p2.toArray(), ...p3.toArray(), ...p1.toArray(), ...p3.toArray(), ...p4.toArray());
+    }
+  }
+  fanGeometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  fanGeometry.computeVertexNormals();
+  honeyLines.children.forEach((line, i) => {
+    const j = i * 2;
+    if (j >= slices) return;
+    const a = -Math.PI / 2 + angle * j / (slices - 1);
+    const pts = radial.map((r, k) => pointAt(r, heights[k] + .012, a));
+    line.geometry.setFromPoints(pts); line.visible = progress > .02;
   });
+  // Boards are attached to the two ends of the same strip and only meet at 360°.
+  const start = -Math.PI / 2, end = start + angle;
+  const setBoard = (board, a, flip) => {
+    const edge = pointAt(1.3, -.14, a);
+    board.position.copy(edge); board.rotation.set(0, -a + (flip ? Math.PI : 0), 0);
+  };
+  setBoard(plateA, start, false); setBoard(plateB, end, true);
+  fan.visible = progress > .015;
 }
-function arrange(progress) {
-  const p = THREE.MathUtils.smoothstep(progress, .08, .92);
-  setOpacity(collapsed, 1 - p);
-  setOpacity(expanded, p);
-  collapsed.scale.setScalar(1 - p * .10);
-  expanded.scale.setScalar(.76 + p * .24);
-  expanded.position.y = -.03 + (1 - p) * .10;
-  document.querySelector('#amount').value = `${Math.round(progress * 100)}%`;
-  document.querySelector('#dimension').textContent = progress < .08 ? '25 × 17 × 9 cm' : `Ø ${Math.round(25 + 25 * progress)} × H 17 cm`;
-}
-arrange(1);
 
-const slider = document.querySelector('#expand');
-slider.addEventListener('input', () => arrange(slider.value / 100));
-document.querySelector('#reset').addEventListener('click', () => { camera.position.set(0, 2.4, 7.8); controls.target.set(0, .15, 0); controls.update(); });
+const compact = new THREE.Group(); root.add(compact);
+const compactCore = new THREE.Mesh(new THREE.ExtrudeGeometry(plateShape(), { depth: 1.12, bevelEnabled: false }), red);
+compactCore.position.z = -.56; compact.add(compactCore);
+for (const z of [-.61, .56]) { const p = new THREE.Mesh(plateGeometry, kraft); p.position.z = z; compact.add(p); }
+
+function setMaterialsOpacity(group, opacity) {
+  group.traverse(o => { if (!o.material) return; o.material.transparent = opacity < .995; o.material.opacity = opacity; o.visible = opacity > .01; });
+}
+function arrange(value) {
+  const p = value / 100;
+  updateFan(p);
+  const compactOpacity = 1 - THREE.MathUtils.smoothstep(p, 0, .12);
+  setMaterialsOpacity(root, 1);
+  setMaterialsOpacity(compact, compactOpacity);
+  fan.visible = p > .012;
+  honeyLines.visible = p > .012;
+  plateA.visible = plateB.visible = p > .012;
+  document.querySelector('#amount').value = `${Math.round(value)}%`;
+  const stage = value < 5 ? '收合狀態' : value < 32 ? '初步展開' : value < 72 ? '半開圓弧' : '完整圓形';
+  document.querySelector('#stage').textContent = stage;
+  document.querySelector('#dimension').textContent = value < 5 ? '25 × 17 × 9 cm' : value < 98 ? `展開 ${Math.round(value * 3.6)}°` : 'Ø 50 × H 17 cm';
+}
+const slider = document.querySelector('#expand'); slider.addEventListener('input', () => arrange(Number(slider.value)));
+document.querySelector('#reset').addEventListener('click', () => { camera.position.set(0, 3.3, 7.7); controls.target.set(0, .05, 0); controls.update(); });
 function resize() { const r = canvas.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
-new ResizeObserver(resize).observe(canvas); resize();
+new ResizeObserver(resize).observe(canvas); resize(); arrange(100);
 renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
