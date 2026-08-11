@@ -3,36 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#271513" />
-    <title>蜂巢紙貓床 3D 展開展示</title>
-    <link rel="stylesheet" href="./style.css" />
+    <meta name="theme-color" content="#14151a" />
+    <title>蜂巢紙展開模型</title>
+    <style>
+      html, body, iframe { width: 100%; height: 100%; margin: 0; border: 0; display: block; background: #14151a; }
+    </style>
   </head>
   <body>
-    <main>
-      <header>
-        <p class="eyebrow">TAISHIN · INTERACTIVE 3D PROTOTYPE</p>
-        <h1>蜂巢紙貓床</h1>
-        <p class="subtitle">拖曳旋轉檢視，並拉動滑桿觀看蜂巢紙由收合到完整圓形的扇形展開。</p>
-      </header>
-      <section class="viewer" aria-label="蜂巢紙貓床 3D 展示">
-        <canvas id="scene"></canvas>
-        <p class="gesture">單指拖曳旋轉 · 雙指縮放</p>
-        <button id="reset" type="button">重設視角</button>
-      </section>
-      <section class="controls" aria-label="展開控制">
-        <div class="control-heading"><span>展開程度</span><output id="amount">100%</output></div>
-        <input id="expand" type="range" min="0" max="100" value="100" aria-label="調整蜂巢紙展開程度" />
-        <div class="labels"><span>收合</span><span>扣合成圓</span></div>
-      </section>
-      <section class="facts">
-        <div><strong id="dimension">Ø 50 × H 17 cm</strong><span>完整展開尺寸</span></div>
-        <div><strong id="stage">完整圓形</strong><span>蜂巢紙扇形展開</span></div>
-      </section>
-      <p class="notice">此為專案展示用 3D 概念原型；端板固定在同一條蜂巢紙的頭尾，展開後於單一接縫扣合。</p>
-    </main>
-    <script type="importmap">
-      { "imports": { "three": "https://unpkg.com/three@0.180.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.180.0/examples/jsm/" } }
-    </script>
-    <script type="module" src="./app.js"></script>
+    <iframe src="./honeycomb_paper_model.html" title="蜂巢紙展開模型" allow="fullscreen"></iframe>
   </body>
 </html>

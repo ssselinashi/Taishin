@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>蜂巢紙立體模型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500&family=Archivo:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#14151a;--paper:#f1e6ce;--brass:#c08a3e;--line:#33353f;--fg:#e8e3d6;--muted:#8b8779}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--ink);color:var(--fg);font-family:"Noto Sans TC",system-ui,sans-serif;font-weight:300;overflow:hidden}
+  #stage{position:absolute;inset:0}
+  canvas{display:block;touch-action:none}
+  .eyebrow{font-family:Archivo,system-ui,sans-serif;font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--brass)}
+  header{position:absolute;top:0;left:0;padding:22px 24px;pointer-events:none}
+  header h1{font-size:15px;font-weight:500;letter-spacing:.04em;margin-top:6px}
+  header p{font-size:12px;color:var(--muted);margin-top:4px}
+  #readout{position:absolute;top:22px;right:24px;text-align:right;pointer-events:none}
+  #readout .num{font-family:Archivo,system-ui,sans-serif;font-weight:500;font-size:30px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1.05}
+  #readout .cap{font-size:11px;color:var(--muted);letter-spacing:.08em;margin-top:2px}
+  #readout .sub{font-size:11px;color:var(--muted);margin-top:10px;font-variant-numeric:tabular-nums}
+  #panel{position:absolute;left:0;right:0;bottom:0;padding:18px 24px 22px;background:linear-gradient(to top,rgba(20,21,26,.96),rgba(20,21,26,0));display:flex;flex-direction:column;gap:14px}
+  .row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .seg{display:flex;border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .seg button{background:transparent;border:0;color:var(--muted);cursor:pointer;font-family:inherit;font-size:12px;font-weight:500;padding:8px 14px;letter-spacing:.05em;transition:background .18s,color .18s}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button[aria-pressed="true"]{background:var(--brass);color:#171308}
+  .seg button:focus-visible{outline:2px solid var(--paper);outline-offset:-2px}
+  .ghost{background:transparent;border:1px solid var(--line);border-radius:2px;color:var(--fg);font-family:inherit;font-size:12px;font-weight:500;padding:8px 16px;cursor:pointer;letter-spacing:.05em;transition:border-color .18s,color .18s}
+  .ghost:hover{border-color:var(--brass);color:var(--brass)}
+  .ghost[aria-pressed="true"]{border-color:var(--brass);color:var(--brass)}
+  .ghost:focus-visible{outline:2px solid var(--paper);outline-offset:2px}
+  .slider-wrap{display:flex;align-items:center;gap:14px;flex:1;min-width:240px}
+  .slider-wrap label{font-size:12px;color:var(--muted);white-space:nowrap;letter-spacing:.06em}
+  input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:1px;background:var(--line);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--paper);cursor:grab;border:3px solid var(--ink);box-shadow:0 0 0 1px var(--paper)}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--paper);cursor:grab;border:3px solid var(--ink)}
+  .pct{font-family:Archivo,sans-serif;font-weight:500;font-size:13px;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+  .hint{font-size:11px;color:var(--muted)}
+  @media (max-width:600px){#readout .num{font-size:22px}header h1{font-size:13px}}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<header>
+  <div class="eyebrow">Honeycomb paper</div>
+  <h1>蜂巢紙結構 + 側背板</h1>
+  <p>100 層紙・交錯膠線・背板 90 × 60 × 2 mm</p>
+</header>
+<div id="readout">
+  <div class="num" id="mainNum">—</div>
+  <div class="cap" id="mainCap">展開角度</div>
+  <div class="sub" id="subNum"></div>
+</div>
+<div id="panel">
+  <div class="row">
+    <div class="slider-wrap">
+      <label for="t">展開</label>
+      <input id="t" type="range" min="0" max="1000" value="0" aria-label="展開程度">
+      <span class="pct" id="pct">0%</span>
+    </div>
+  </div>
+  <div class="row">
+    <div class="seg" role="group" aria-label="展開方式">
+      <button id="mFan" aria-pressed="true">環形展開</button>
+      <button id="mLin" aria-pressed="false">直線拉伸</button>
+    </div>
+    <button class="ghost" id="play">自動開合</button>
+    <button class="ghost" id="boardBtn" aria-pressed="true">背板</button>
+    <span class="hint">拖曳旋轉視角・滾輪縮放</span>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  var P = {N:100, M:12, w:2.0, f:6.0, H:60.0, L:90.0, TH:2.0};
+  var LIN_MAX = P.f * Math.sin(Math.PI/3), LIN_MIN = 0.5;
+  var mode='fan', t=0, playing=false, dir=1, showBoards=true;
+
+  function makeShape(){
+    var s = new THREE.Shape();
+    s.moveTo(4,0);
+    s.lineTo(84,0);
+    s.absarc(84,6,6,-Math.PI/2,0,false);
+    s.lineTo(90,44);
+    s.absarc(74,44,16,0,Math.PI*150/180,false);
+    s.bezierCurveTo(54,42,26,22,11,22);
+    s.lineTo(3,22);
+    s.absarc(3,19,3,Math.PI/2,Math.PI,false);
+    s.lineTo(0,4);
+    s.absarc(4,4,4,Math.PI,Math.PI*1.5,false);
+    s.closePath();
+    return s;
+  }
+
+  var STEP=0.25, NH=Math.round(P.L/STEP)+1, hTab=new Float32Array(NH);
+  (function buildHeightTable(){
+    var i,x;
+    for(i=0;i<NH;i++) hTab[i]=-1;
+    for(i=0;i<NH;i++){
+      x=i*STEP;
+      if(x<=3) hTab[i]=19+Math.sqrt(Math.max(9-(x-3)*(x-3),0));
+      else if(x<=11) hTab[i]=22;
+      else if(x>=60.14) hTab[i]=44+Math.sqrt(Math.max(256-(x-74)*(x-74),0));
+    }
+    var p0=[60.14,52],c1=[54,42],c2=[26,22],p3=[11,22];
+    for(var u=0;u<=1.0001;u+=0.0008){
+      var v=1-u;
+      var bx=v*v*v*p0[0]+3*v*v*u*c1[0]+3*v*u*u*c2[0]+u*u*u*p3[0];
+      var by=v*v*v*p0[1]+3*v*v*u*c1[1]+3*v*u*u*c2[1]+u*u*u*p3[1];
+      var k=Math.round(bx/STEP);
+      if(k>=0&&k<NH&&hTab[k]<0) hTab[k]=by;
+    }
+    var lastGood=22;
+    for(i=0;i<NH;i++){ if(hTab[i]<0) hTab[i]=lastGood; else lastGood=hTab[i]; }
+  })();
+  function hAt(x){
+    if(x<=0) return hTab[0];
+    if(x>=P.L) return hTab[NH-1];
+    var q=x/STEP, i=Math.floor(q), fr=q-i;
+    return hTab[i]*(1-fr)+hTab[i+1]*fr;
+  }
+
+  var stage=document.getElementById('stage');
+  var scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x14151a);
+  scene.fog=new THREE.Fog(0x14151a,460,1100);
+  var camera=new THREE.PerspectiveCamera(38,1,1,3000);
+  var renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  stage.appendChild(renderer.domElement);
+
+  scene.add(new THREE.HemisphereLight(0xf3ecdc,0x2a2c34,0.85));
+  var key=new THREE.DirectionalLight(0xfff4e0,0.95); key.position.set(160,260,140); scene.add(key);
+  var rim=new THREE.DirectionalLight(0xc08a3e,0.35); rim.position.set(-180,80,-160); scene.add(rim);
+
+  var paperMat=new THREE.MeshStandardMaterial({color:0xf1e6ce,roughness:0.94,metalness:0,side:THREE.DoubleSide});
+  var boardMat=new THREE.MeshStandardMaterial({color:0xc9a271,roughness:0.88,metalness:0});
+  var geo=new THREE.BufferGeometry();
+  scene.add(new THREE.Mesh(geo,paperMat));
+
+  var shp=makeShape();
+  var bg1=new THREE.ExtrudeGeometry(shp,{depth:P.TH,bevelEnabled:false});
+  var bg2=new THREE.ExtrudeGeometry(shp,{depth:P.TH,bevelEnabled:false});
+  bg2.translate(0,0,-P.TH);
+  var boardA=new THREE.Mesh(bg1,boardMat), boardB=new THREE.Mesh(bg2,boardMat);
+  scene.add(boardA); scene.add(boardB);
+
+  var grid=new THREE.GridHelper(700,28,0x2a2c34,0x1e2027);
+  grid.position.y=-P.H/2-1; grid.material.opacity=0.5; grid.material.transparent=true;
+  scene.add(grid);
+
+  function profile(){
+    var pts=[], r=0, dphi=0, sLin=0;
+    if(mode==='fan') dphi=(0.02+t*0.98)*(Math.PI*2/P.N);
+    else sLin=LIN_MIN+t*(LIN_MAX-LIN_MIN);
+    for(var m=0;m<P.M;m++){
+      pts.push([r,m%2]); r+=P.w; pts.push([r,m%2]);
+      if(m<P.M-1){
+        var s=(mode==='fan')?r*dphi:sLin;
+        r+=Math.sqrt(Math.max(P.f*P.f-s*s,0));
+      }
+    }
+    var k=P.L/r;
+    for(var i=0;i<pts.length;i++) pts[i][0]*=k;
+    return {pts:pts,dphi:dphi,sLin:sLin};
+  }
+
+  var posAttr=null, A=[0,0], B=[0,0];
+  function build(){
+    var pr=profile(), pts=pr.pts, n=pts.length;
+    var need=P.N*(n-1)*18;
+    if(!posAttr||posAttr.array.length!==need){
+      posAttr=new THREE.BufferAttribute(new Float32Array(need),3);
+      geo.setAttribute('position',posAttr);
+    }
+    var a=posAttr.array,k=0, cx=(P.N)*pr.sLin/2, yb=-P.H/2;
+    function place(r,ph,j,out){
+      var idx=(((ph+j)%2)===0)?j:j+1;
+      if(mode==='fan'){ var ang=idx*pr.dphi; out[0]=r*Math.cos(ang); out[1]=r*Math.sin(ang); }
+      else { out[0]=idx*pr.sLin-cx; out[1]=r-P.L/2; }
+    }
+    for(var j=0;j<P.N;j++){
+      for(var i=0;i<n-1;i++){
+        var x1=pts[i][0], x2=pts[i+1][0];
+        place(x1,pts[i][1],j,A); place(x2,pts[i+1][1],j,B);
+        var h1=yb+hAt(x1), h2=yb+hAt(x2);
+        var ax=A[0],az=A[1],bx=B[0],bz=B[1];
+        a[k++]=ax;a[k++]=yb;a[k++]=az; a[k++]=bx;a[k++]=yb;a[k++]=bz; a[k++]=bx;a[k++]=h2;a[k++]=bz;
+        a[k++]=ax;a[k++]=yb;a[k++]=az; a[k++]=bx;a[k++]=h2;a[k++]=bz; a[k++]=ax;a[k++]=h1;a[k++]=az;
+      }
+    }
+    posAttr.needsUpdate=true; geo.computeVertexNormals(); geo.computeBoundingSphere();
+
+    boardA.visible=showBoards; boardB.visible=showBoards;
+    boardA.position.set(0,yb,0); boardB.position.set(0,yb,0);
+    if(mode==='fan'){
+      boardA.rotation.set(0,0,0); boardA.position.set(0,yb,0);
+      boardB.rotation.set(0,-(P.N*pr.dphi),0);
+    } else {
+      boardA.rotation.set(0,-Math.PI/2,0); boardA.position.set(-cx,yb,-P.L/2);
+      boardB.rotation.set(0,-Math.PI/2,0); boardB.position.set(P.N*pr.sLin-cx,yb,-P.L/2);
+    }
+
+    var num=document.getElementById('mainNum'), cap=document.getElementById('mainCap'), sub=document.getElementById('subNum');
+    if(mode==='fan'){
+      cap.textContent='展開角度';
+      num.textContent=Math.round(P.N*pr.dphi*180/Math.PI)+'°';
+      sub.textContent='直徑 18.0 cm　高 6.0 cm';
+    } else {
+      cap.textContent='拉伸長度';
+      num.textContent=(P.N*pr.sLin/10).toFixed(1)+' cm';
+      sub.textContent='深 9.0 cm　高 6.0 cm';
+    }
+    document.getElementById('pct').textContent=Math.round(t*100)+'%';
+  }
+
+  var theta=0.9, phi=1.02, dist=300;
+  function updateCam(){
+    camera.position.set(dist*Math.sin(phi)*Math.cos(theta),dist*Math.cos(phi),dist*Math.sin(phi)*Math.sin(theta));
+    camera.lookAt(0,0,0);
+  }
+  var dragging=false,px=0,py=0;
+  renderer.domElement.addEventListener('pointerdown',function(e){dragging=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId);});
+  renderer.domElement.addEventListener('pointermove',function(e){
+    if(!dragging)return;
+    theta-=(e.clientX-px)*0.008;
+    phi=Math.max(0.18,Math.min(1.52,phi-(e.clientY-py)*0.006));
+    px=e.clientX;py=e.clientY;updateCam();
+  });
+  renderer.domElement.addEventListener('pointerup',function(){dragging=false;});
+  renderer.domElement.addEventListener('wheel',function(e){
+    e.preventDefault(); dist=Math.max(110,Math.min(900,dist+e.deltaY*0.45)); updateCam();
+  },{passive:false});
+
+  var slider=document.getElementById('t'), playBtn=document.getElementById('play');
+  slider.addEventListener('input',function(){
+    playing=false; playBtn.textContent='自動開合'; playBtn.setAttribute('aria-pressed','false');
+    t=slider.value/1000; build();
+  });
+  function setMode(m){
+    mode=m;
+    document.getElementById('mFan').setAttribute('aria-pressed',m==='fan');
+    document.getElementById('mLin').setAttribute('aria-pressed',m==='lin');
+    dist=(m==='fan')?300:520; updateCam(); build();
+  }
+  document.getElementById('mFan').onclick=function(){setMode('fan');};
+  document.getElementById('mLin').onclick=function(){setMode('lin');};
+  playBtn.onclick=function(){
+    playing=!playing;
+    playBtn.textContent=playing?'暫停':'自動開合';
+    playBtn.setAttribute('aria-pressed',playing);
+  };
+  var boardBtn=document.getElementById('boardBtn');
+  boardBtn.onclick=function(){
+    showBoards=!showBoards;
+    boardBtn.setAttribute('aria-pressed',showBoards);
+    boardBtn.textContent=showBoards?'背板':'顯示背板';
+    build();
+  };
+
+  function resize(){
+    var w=stage.clientWidth,h=stage.clientHeight;
+    renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize',resize);
+
+  var last=performance.now();
+  function loop(now){
+    var dt=Math.min((now-last)/1000,0.05); last=now;
+    if(playing){
+      t+=dir*dt*0.34;
+      if(t>=1){t=1;dir=-1;} if(t<=0){t=0;dir=1;}
+      slider.value=Math.round(t*1000); build();
+    }
+    renderer.render(scene,camera);
+    requestAnimationFrame(loop);
+  }
+  resize(); updateCam(); build();
+  if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    playing=true; playBtn.textContent='暫停'; playBtn.setAttribute('aria-pressed','true');
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
