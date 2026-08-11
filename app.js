@@ -35,15 +35,25 @@ for (let i = 0; i < slices; i += 2) {
   const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x821d24, transparent: true, opacity: .72 }));
   honeyLines.add(line);
 }
-// Closed state: a deliberately simple, well-lit solid bed so it remains visible on every phone GPU.
+// Closed state: a real bowl profile, not a flat disc. The profile rises from the solid centre to a tall folded-paper wall.
 const closedBed = new THREE.Group();
-const closedOuter = new THREE.Mesh(new THREE.TorusGeometry(1.72, .42, 18, 96), new THREE.MeshBasicMaterial({ color: 0xc92d31 }));
-closedOuter.rotation.x = Math.PI / 2; closedOuter.scale.y = .92;
-const closedCushion = new THREE.Mesh(new THREE.CircleGeometry(1.70, 96), new THREE.MeshBasicMaterial({ color: 0xae252b, side: THREE.DoubleSide }));
-closedCushion.rotation.x = -Math.PI / 2; closedCushion.position.y = -.22;
-const closedInner = new THREE.Mesh(new THREE.CircleGeometry(1.25, 96), new THREE.MeshBasicMaterial({ color: 0xc73535, side: THREE.DoubleSide }));
-closedInner.rotation.x = -Math.PI / 2; closedInner.position.y = -.205;
-closedBed.add(closedOuter, closedCushion, closedInner); closedBed.visible = false; root.add(closedBed);
+const bowlProfile = [
+  new THREE.Vector2(.01, -.62), new THREE.Vector2(.52, -.58), new THREE.Vector2(1.08, -.43),
+  new THREE.Vector2(1.55, -.18), new THREE.Vector2(1.86, .10), new THREE.Vector2(2.02, .42)
+];
+const closedBowl = new THREE.Mesh(new THREE.LatheGeometry(bowlProfile, 112), new THREE.MeshPhongMaterial({ color: 0xc92d31, specular: 0x4d090c, shininess: 12, side: THREE.DoubleSide }));
+closedBed.add(closedBowl);
+// Visible vertical pleats around the outside create the honeycomb-paper wall rather than a smooth plastic ring.
+const pleatMat = new THREE.MeshBasicMaterial({ color: 0x8b1d25 });
+for (let i = 0; i < 82; i++) {
+  const a = i / 82 * Math.PI * 2;
+  const pleat = new THREE.Mesh(new THREE.BoxGeometry(.025, .62, .045), pleatMat);
+  pleat.position.set(1.99 * Math.cos(a), -.16, 1.99 * Math.sin(a));
+  pleat.rotation.y = -a; closedBed.add(pleat);
+}
+const closedRim = new THREE.Mesh(new THREE.TorusGeometry(2.02, .035, 8, 112), new THREE.MeshBasicMaterial({ color: 0xe2524a }));
+closedRim.rotation.x = Math.PI / 2; closedRim.position.y = .42; closedBed.add(closedRim);
+closedBed.visible = false; root.add(closedBed);
 
 function plateShape() {
   const s = new THREE.Shape();
