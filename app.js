@@ -35,15 +35,15 @@ for (let i = 0; i < slices; i += 2) {
   const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x821d24, transparent: true, opacity: .72 }));
   honeyLines.add(line);
 }
-// A complete 360° closure has no exposed end boards. This solid lathed bowl makes that final, closed product silhouette explicit.
-const closedProfile = [
-  new THREE.Vector2(0, -.36), new THREE.Vector2(.48, -.42), new THREE.Vector2(1.12, -.34),
-  new THREE.Vector2(1.66, -.14), new THREE.Vector2(1.98, .12), new THREE.Vector2(2.08, .28)
-];
-const closedBowl = new THREE.Mesh(new THREE.LatheGeometry(closedProfile, 96), new THREE.MeshStandardMaterial({ color: 0xcf3033, roughness: .68, emissive: 0x4a080a, emissiveIntensity: .52 }));
-closedBowl.visible = false; root.add(closedBowl);
-const closedRim = new THREE.Mesh(new THREE.TorusGeometry(2.08, .035, 8, 96), kraft);
-closedRim.rotation.x = Math.PI / 2; closedRim.position.y = .28; closedRim.visible = false; root.add(closedRim);
+// Closed state: a deliberately simple, well-lit solid bed so it remains visible on every phone GPU.
+const closedBed = new THREE.Group();
+const closedOuter = new THREE.Mesh(new THREE.TorusGeometry(1.72, .42, 18, 96), new THREE.MeshBasicMaterial({ color: 0xc92d31 }));
+closedOuter.rotation.x = Math.PI / 2; closedOuter.scale.y = .92;
+const closedCushion = new THREE.Mesh(new THREE.CircleGeometry(1.70, 96), new THREE.MeshBasicMaterial({ color: 0xae252b, side: THREE.DoubleSide }));
+closedCushion.rotation.x = -Math.PI / 2; closedCushion.position.y = -.22;
+const closedInner = new THREE.Mesh(new THREE.CircleGeometry(1.25, 96), new THREE.MeshBasicMaterial({ color: 0xc73535, side: THREE.DoubleSide }));
+closedInner.rotation.x = -Math.PI / 2; closedInner.position.y = -.205;
+closedBed.add(closedOuter, closedCushion, closedInner); closedBed.visible = false; root.add(closedBed);
 
 function plateShape() {
   const s = new THREE.Shape();
@@ -113,7 +113,7 @@ function arrange(value) {
   honeyLines.visible = p > .012 && p < .985;
   plateA.visible = plateB.visible = p > .012 && p < .985;
   closureBand.visible = p >= .985;
-  closedBowl.visible = closedRim.visible = p >= .985;
+  closedBed.visible = p >= .985;
   document.querySelector('#amount').value = `${Math.round(value)}%`;
   const stage = value < 5 ? '收合狀態' : value < 32 ? '初步展開' : value < 72 ? '半開圓弧' : '完整圓形';
   document.querySelector('#stage').textContent = stage;
