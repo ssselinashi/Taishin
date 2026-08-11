@@ -35,6 +35,15 @@ for (let i = 0; i < slices; i += 2) {
   const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x821d24, transparent: true, opacity: .72 }));
   honeyLines.add(line);
 }
+// A complete 360° closure has no exposed end boards. This solid lathed bowl makes that final, closed product silhouette explicit.
+const closedProfile = [
+  new THREE.Vector2(0, -.36), new THREE.Vector2(.48, -.42), new THREE.Vector2(1.12, -.34),
+  new THREE.Vector2(1.66, -.14), new THREE.Vector2(1.98, .12), new THREE.Vector2(2.08, .28)
+];
+const closedBowl = new THREE.Mesh(new THREE.LatheGeometry(closedProfile, 96), new THREE.MeshStandardMaterial({ color: 0xcf3033, roughness: .68, emissive: 0x4a080a, emissiveIntensity: .52 }));
+closedBowl.visible = false; root.add(closedBowl);
+const closedRim = new THREE.Mesh(new THREE.TorusGeometry(2.08, .035, 8, 96), kraft);
+closedRim.rotation.x = Math.PI / 2; closedRim.position.y = .28; closedRim.visible = false; root.add(closedRim);
 
 function plateShape() {
   const s = new THREE.Shape();
@@ -100,10 +109,11 @@ function arrange(value) {
   const compactOpacity = 1 - THREE.MathUtils.smoothstep(p, 0, .12);
   setMaterialsOpacity(root, 1);
   setMaterialsOpacity(compact, compactOpacity);
-  fan.visible = p > .012;
-  honeyLines.visible = p > .012;
+  fan.visible = p > .012 && p < .985;
+  honeyLines.visible = p > .012 && p < .985;
   plateA.visible = plateB.visible = p > .012 && p < .985;
   closureBand.visible = p >= .985;
+  closedBowl.visible = closedRim.visible = p >= .985;
   document.querySelector('#amount').value = `${Math.round(value)}%`;
   const stage = value < 5 ? '收合狀態' : value < 32 ? '初步展開' : value < 72 ? '半開圓弧' : '完整圓形';
   document.querySelector('#stage').textContent = stage;
