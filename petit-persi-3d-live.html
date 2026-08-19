@@ -157,6 +157,19 @@
   .quizNestItem span{font-size:12px;color:var(--fg);letter-spacing:.02em;text-align:center}
   .quizNestItem span b{color:var(--kraft);font-size:15px;font-weight:600;margin-right:2px}
   .nestNote{font-size:12.5px;color:var(--muted);line-height:1.8;margin-bottom:4px}
+
+  .quizInfoBtn{background:none;border:0;padding:0;margin:0 0 16px auto;cursor:pointer;
+    color:var(--kraft);font-size:12px;letter-spacing:.03em;font-family:inherit;
+    display:flex;align-items:center;gap:5px;text-decoration:underline;
+    text-underline-offset:3px;text-decoration-color:rgba(138,106,68,.4)}
+  .quizInfoBtn:hover{color:var(--fg)}
+  .quizInfoBtn:focus-visible{outline:2px solid var(--kraft);outline-offset:2px}
+  .quizInfoBtn .qi{width:14px;height:14px;flex:none;border-radius:50%;
+    border:1px solid currentColor;font-size:10px;line-height:12px;text-align:center}
+  .quizInfoPanel{display:none;font-size:12px;color:var(--muted);line-height:1.85;
+    background:#fbf7f0;border:1px solid var(--line);border-radius:4px;
+    padding:12px 14px;margin:-8px 0 16px}
+  .quizInfoPanel.open{display:block}
 </style>
 </head>
 <body>
@@ -198,6 +211,8 @@
     <button id="quizClose" type="button" aria-label="關閉">&times;</button>
     <h2 id="quizTitle">猜猜看</h2>
     <p class="sub">同一片蜂巢紙餘料，做成下面兩款再製品，哪一款的<strong>餘料利用率</strong>比較高？</p>
+    <button type="button" class="quizInfoBtn" id="quizInfoToggle" aria-expanded="false" aria-controls="quizInfoPanel"><span class="qi">i</span>此處餘料利用率定義</button>
+    <div class="quizInfoPanel" id="quizInfoPanel">「餘料利用率」以同一片餘料上實際可裁製出的產品件數估算：件數愈多，代表這片餘料被轉化為可用產品的比例愈高。本頁排版為示意樣本，實際餘料尺寸與可排入件數會依生產批次略有差異。</div>
     <div class="quizScrap"><img src="data:image/png;base64,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" alt="蜂巢紙餘料原始輪廓"><span>蜂巢紙餘料</span></div>
     <div class="quizOpts" id="quizOpts">
       <button class="quizOpt" type="button" data-id="persi">
@@ -690,6 +705,8 @@
       btn.classList.remove('correct','wrong');
     });
     result.classList.remove('show');
+    if(typeof infoPanel!=='undefined'&&infoPanel){ infoPanel.classList.remove('open'); }
+    if(typeof infoBtn!=='undefined'&&infoBtn){ infoBtn.setAttribute('aria-expanded','false'); }
   }
 
   opts.addEventListener('click',function(e){
@@ -706,6 +723,13 @@
   overlay.addEventListener('click',function(e){ if(e.target===overlay) closeQuiz(); });
   document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&overlay.classList.contains('open')) closeQuiz(); });
   again.addEventListener('click',resetQuiz);
+
+  var infoBtn=document.getElementById('quizInfoToggle');
+  var infoPanel=document.getElementById('quizInfoPanel');
+  infoBtn.addEventListener('click',function(){
+    var open=infoPanel.classList.toggle('open');
+    infoBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
 })();
 </script>
 </body>
